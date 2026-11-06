@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { generateApp } from "@/lib/generate.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -23,11 +25,29 @@ function Index() {
     { role: "ai", text: "Hi! Describe the app you want to build." },
   ]);
   const [input, setInput] = useState("");
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const gen = useServerFn(generateApp);
 
-  const send = () => {
-    if (!input.trim()) return;
-    setMsgs((m) => [...m, { role: "user", text: input }, { role: "ai", text: "Got it — building will be wired up soon." }]);
+  const send = async () => {
+    const prompt = input.trim();
+    if (!prompt || loading) return;
+    setMsgs((m) => [...m, { role: "user", text: prompt }]);
     setInput("");
+    setLoading(true);
+    try {
+      const r = await gen({ data: { prompt, currentCode: code || undefined } });
+      if (r.ok) {
+        setCode(r.code);
+        setMsgs((m) => [...m, { role: "ai", text: "Done! Open the Preview tab to see your app." }]);
+      } else {
+        setMsgs((m) => [...m, { role: "ai", text: `Sorry: ${r.error}` }]);
+      }
+    } catch {
+      setMsgs((m) => [...m, { role: "ai", text: "Sorry, something went wrong." }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -61,6 +81,7 @@ function Index() {
                   </div>
                 </div>
               ))}
+              {loading && <div className="text-sm text-muted-foreground">Building your app…</div>}
             </div>
             <div className="flex gap-2 border-t border-border p-3">
               <input
@@ -76,19 +97,26 @@ function Index() {
         )}
         {tab === "preview" && (
           <div className="flex h-full items-center justify-center p-4">
-            <div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-dashed border-border text-muted-foreground">
-              Your app preview will appear here
-            </div>
+            {code ? (
+              <iframe title="App preview" srcDoc={code} sandbox="allow-scripts allow-forms allow-modals" className="h-full w-full rounded-xl border border-border bg-card" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-dashed border-border text-muted-foreground">
+                Your app preview will appear here
+              </div>
+            )}
           </div>
         )}
         {tab === "project" && (
-          <div className="space-y-3 p-4">
-            {[["Name", "Untitled project"], ["Status", "Draft"], ["Files", "0"]].map(([k, v]) => (
+          <div className="space-y-3 overflow-y-auto p-4 h-full">
+            {[["Name", "Untitled project"], ["Status", code ? "Generated" : "Draft"], ["Files", code ? "1 (index.html)" : "0"]].map(([k, v]) => (
               <div key={k} className="flex justify-between rounded-lg border border-border bg-card p-4">
                 <span className="text-muted-foreground">{k}</span>
                 <span className="font-medium">{v}</span>
               </div>
             ))}
+            {code && (
+              <pre className="max-h-[60vh] overflow-auto rounded-lg border border-border bg-muted p-3 text-xs"><code>{code}</code></pre>
+            )}
           </div>
         )}
       </main>
