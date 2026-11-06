@@ -1,122 +1,90 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { generateApp } from "@/lib/generate.functions";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createProject, deleteProject, listProjects, type Project } from "@/lib/projects";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "FindMit App Builder" },
-      { name: "description", content: "Build websites and apps by chatting with AI." },
+      { title: "FindMit App Builder — Your projects" },
+      { name: "description", content: "Create and manage apps you build by chatting with AI." },
       { property: "og:title", content: "FindMit App Builder" },
-      { property: "og:description", content: "Build websites and apps by chatting with AI." },
+      { property: "og:description", content: "Create and manage apps you build by chatting with AI." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: Index,
+  component: Dashboard,
 });
 
-type Tab = "chat" | "preview" | "project";
+function Dashboard() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [name, setName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const navigate = useNavigate();
 
-function Index() {
-  const [tab, setTab] = useState<Tab>("chat");
-  const [msgs, setMsgs] = useState<{ role: "user" | "ai"; text: string }[]>([
-    { role: "ai", text: "Hi! Describe the app you want to build." },
-  ]);
-  const [input, setInput] = useState("");
-  const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const gen = useServerFn(generateApp);
+  useEffect(() => setProjects(listProjects()), []);
 
-  const send = async () => {
-    const prompt = input.trim();
-    if (!prompt || loading) return;
-    setMsgs((m) => [...m, { role: "user", text: prompt }]);
-    setInput("");
-    setLoading(true);
-    try {
-      const r = await gen({ data: { prompt, currentCode: code || undefined } });
-      if (r.ok) {
-        setCode(r.code);
-        setMsgs((m) => [...m, { role: "ai", text: "Done! Open the Preview tab to see your app." }]);
-      } else {
-        setMsgs((m) => [...m, { role: "ai", text: `Sorry: ${r.error}` }]);
-      }
-    } catch {
-      setMsgs((m) => [...m, { role: "ai", text: "Sorry, something went wrong." }]);
-    } finally {
-      setLoading(false);
-    }
+  const create = () => {
+    const p = createProject(name);
+    navigate({ to: "/project/$id", params: { id: p.id } });
   };
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
         <h1 className="font-display text-lg font-bold">
           <span className="text-primary">FindMit</span> App Builder
         </h1>
+        <button onClick={() => setCreating(true)} className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">
+          + New project
+        </button>
       </header>
-      <nav className="flex gap-1 border-b border-border p-2">
-        {(["chat", "preview", "project"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium capitalize transition-colors ${
-              tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </nav>
-      <main className="flex-1 overflow-hidden">
-        {tab === "chat" && (
-          <div className="flex h-full flex-col">
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
-              {msgs.map((m, i) => (
-                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                    {m.text}
-                  </div>
-                </div>
-              ))}
-              {loading && <div className="text-sm text-muted-foreground">Building your app…</div>}
-            </div>
-            <div className="flex gap-2 border-t border-border p-3">
+      <main className="mx-auto max-w-4xl p-4">
+        {creating && (
+          <div className="mb-4 rounded-xl border border-border bg-card p-4">
+            <label className="mb-2 block text-sm font-medium">Project name</label>
+            <div className="flex gap-2">
               <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && send()}
-                placeholder="Ask FindMit to build something..."
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && create()}
+                placeholder="My awesome app"
                 className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
-              <button onClick={send} className="rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Send</button>
+              <button onClick={create} className="rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Create</button>
+              <button onClick={() => setCreating(false)} className="rounded-md px-3 text-sm text-muted-foreground hover:bg-muted">Cancel</button>
             </div>
           </div>
         )}
-        {tab === "preview" && (
-          <div className="flex h-full items-center justify-center p-4">
-            {code ? (
-              <iframe title="App preview" srcDoc={code} sandbox="allow-scripts allow-forms allow-modals" className="h-full w-full rounded-xl border border-border bg-card" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-dashed border-border text-muted-foreground">
-                Your app preview will appear here
-              </div>
-            )}
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground">Your projects</h2>
+        {projects.length === 0 ? (
+          <div className="rounded-xl border-2 border-dashed border-border p-10 text-center text-muted-foreground">
+            No projects yet. Tap "+ New project" to start building.
           </div>
-        )}
-        {tab === "project" && (
-          <div className="space-y-3 overflow-y-auto p-4 h-full">
-            {[["Name", "Untitled project"], ["Status", code ? "Generated" : "Draft"], ["Files", code ? "1 (index.html)" : "0"]].map(([k, v]) => (
-              <div key={k} className="flex justify-between rounded-lg border border-border bg-card p-4">
-                <span className="text-muted-foreground">{k}</span>
-                <span className="font-medium">{v}</span>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {projects.map((p) => (
+              <div key={p.id} className="rounded-xl border border-border bg-card p-4">
+                <Link to="/project/$id" params={{ id: p.id }} className="block">
+                  <div className="font-medium">{p.name}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {p.code ? "Generated" : "Draft"} · Edited {new Date(p.updatedAt).toLocaleString()}
+                  </div>
+                </Link>
+                <button
+                  onClick={() => {
+                    if (confirm(`Delete "${p.name}"?`)) {
+                      deleteProject(p.id);
+                      setProjects(listProjects());
+                    }
+                  }}
+                  className="mt-3 text-xs text-destructive hover:underline"
+                >
+                  Delete
+                </button>
               </div>
             ))}
-            {code && (
-              <pre className="max-h-[60vh] overflow-auto rounded-lg border border-border bg-muted p-3 text-xs"><code>{code}</code></pre>
-            )}
           </div>
         )}
       </main>
