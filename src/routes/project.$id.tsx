@@ -31,6 +31,12 @@ function Builder() {
   const [input, setInput] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<"chat" | "build">("chat");
+  const implement = (i: number, prompt: string) => {
+    setMsgs((m) => m.map((x, j) => (j === i ? { ...x, done: true } : x)));
+    setMode("build");
+    void send(prompt, "build");
+  };
   const gen = useServerFn(generateApp);
   const pubFn = useServerFn(publishApp);
   const [pub, setPub] = useState<{ code?: string | undefined; at?: number | undefined }>({});
@@ -72,18 +78,22 @@ function Builder() {
     if (found) updateProject(id, { messages: msgs, code, name });
   }, [found, id, msgs, code, name]);
 
-  const send = async () => {
-    const prompt = input.trim();
+  const send = async (override?: string, forceMode?: "chat" | "build") => {
+    const prompt = (override ?? input).trim();
+    const useMode = forceMode ?? mode;
     if (!prompt || loading) return;
+    const history = msgs.slice(-20).map((m) => ({ role: m.role, text: m.text.slice(0, 8000) }));
     setMsgs((m) => [...m, { role: "user", text: prompt }]);
-    setInput("");
+    if (!override) setInput("");
     setLoading(true);
     try {
-      const r = await gen({ data: { prompt, currentCode: code || undefined } });
-      if (r.ok) {
+      const r = await gen({ data: { prompt, currentCode: code || undefined, mode: useMode, history } });
+      if (r.ok && r.mode === "build") {
         setCode(r.code);
         setMsgs((m) => [...m, { role: "ai", text: "Done! Open the Preview tab to see your app." }]);
-      } else setMsgs((m) => [...m, { role: "ai", text: `Sorry: ${r.error}` }]);
+      } else if (r.ok && r.mode === "chat") {
+        setMsgs((m) => [...m, { role: "ai", text: r.text, ...(r.suggest ? { suggest: r.suggest } : {}) }]);
+      } else if (!r.ok) setMsgs((m) => [...m, { role: "ai", text: `Sorry: ${r.error}` }]);
     } catch {
       setMsgs((m) => [...m, { role: "ai", text: "Sorry, something went wrong." }]);
     } finally {
@@ -148,21 +158,48 @@ function Builder() {
               {msgs.map((m, i) => (
                 <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                    {m.text}
+                    <div className="whitespace-pre-wrap">{m.text}</div>
+                    {m.suggest && (
+                      <div className="mt-3 rounded-xl border border-border bg-card p-3">
+                        <p className="text-xs text-muted-foreground">Switch to Build mode to implement this?</p>
+                        <p className="mt-1 text-xs italic">{m.suggest}</p>
+                        <button
+                          disabled={m.done || loading}
+                          onClick={() => implement(i, m.suggest!)}
+                          className="mt-2 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+                        >
+                          {m.done ? "Switched to Build mode" : "Switch to Build mode"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
-              {loading && <div className="text-sm text-muted-foreground">Building your app…</div>}
+              {loading && <div className="text-sm text-muted-foreground">{mode === "build" ? "Building your app…" : "Thinking…"}</div>}
             </div>
-            <div className="flex gap-2 border-t border-border p-3">
+            <div className="flex gap-1 border-t border-border px-3 pt-2">
+              {(["chat", "build"] as const).map((md) => (
+                <button
+                  key={md}
+                  onClick={() => setMode(md)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${mode === md ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                >
+                  {md}
+                </button>
+              ))}
+              <span className="ml-auto self-center text-xs text-muted-foreground">
+                {mode === "chat" ? "Discuss ideas — no changes" : "Changes your app"}
+              </span>
+            </div>
+            <div className="flex gap-2 p-3">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send()}
-                placeholder="Ask FindMit to build something..."
+                placeholder={mode === "chat" ? "Ask FindMit anything..." : "Ask FindMit to build something..."}
                 className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
-              <button onClick={send} className="rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Send</button>
+              <button onClick={() => send()} className="rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Send</button>
             </div>
           </div>
         )}

@@ -1,4 +1,4 @@
-export type Msg = { role: "user" | "ai"; text: string };
+export type Msg = { role: "user" | "ai"; text: string; suggest?: string; done?: boolean };
 export interface Project {
   id: string;
   name: string;
