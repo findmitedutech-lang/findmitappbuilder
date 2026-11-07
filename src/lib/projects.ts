@@ -6,6 +6,9 @@ export interface Project {
   updatedAt: number;
   messages: Msg[];
   code: string;
+  publishToken?: string;
+  publishedCode?: string;
+  publishedAt?: number;
 }
 
 const KEY = "findmit-projects";

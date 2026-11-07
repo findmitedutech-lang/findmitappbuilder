@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { generateApp } from "@/lib/generate.functions";
+import { publishApp } from "@/lib/publish.functions";
 import { getProject, updateProject, type Msg } from "@/lib/projects";
 
 export const Route = createFileRoute("/project/$id")({
@@ -31,6 +32,31 @@ function Builder() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const gen = useServerFn(generateApp);
+  const pubFn = useServerFn(publishApp);
+  const [pub, setPub] = useState<{ code?: string; at?: number }>({});
+  const [publishing, setPublishing] = useState(false);
+  const [pubError, setPubError] = useState("");
+  const link = pub.at && typeof window !== "undefined" ? `${window.location.origin}/p/${id}` : "";
+
+  const publish = async () => {
+    const p = getProject(id);
+    if (!p || !code) return;
+    const token = p.publishToken ?? crypto.randomUUID() + crypto.randomUUID();
+    setPublishing(true);
+    setPubError("");
+    try {
+      const r = await pubFn({ data: { id, name, code, token } });
+      if (r.ok) {
+        const at = Date.now();
+        updateProject(id, { publishToken: token, publishedCode: code, publishedAt: at });
+        setPub({ code, at });
+      } else setPubError(r.error);
+    } catch {
+      setPubError("Could not publish");
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   useEffect(() => {
     const p = getProject(id);
@@ -38,6 +64,7 @@ function Builder() {
     setName(p.name);
     setMsgs(p.messages);
     setCode(p.code);
+    setPub({ code: p.publishedCode, at: p.publishedAt });
     setFound(true);
   }, [id]);
 
@@ -82,8 +109,25 @@ function Builder() {
           onChange={(e) => setName(e.target.value)}
           className="flex-1 rounded bg-transparent px-1 font-display text-lg font-bold outline-none focus:ring-2 focus:ring-ring"
         />
-        <span className="text-xs text-muted-foreground">Saved</span>
+        <span className="text-xs text-muted-foreground">
+          {!pub.at ? "Not published" : pub.code === code ? "Live · up to date" : "Unpublished changes"}
+        </span>
+        <button
+          onClick={publish}
+          disabled={!code || publishing}
+          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {publishing ? "Publishing…" : pub.at ? "Update" : "Publish"}
+        </button>
       </header>
+      {link && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted px-4 py-2 text-sm">
+          <span className="text-muted-foreground">Live link:</span>
+          <a href={link} target="_blank" rel="noreferrer" className="truncate text-primary underline">{link}</a>
+          <button onClick={() => navigator.clipboard.writeText(link)} className="rounded border border-border px-2 py-0.5 text-xs">Copy</button>
+          {pubError && <span className="text-destructive">{pubError}</span>}
+        </div>
+      )}
       <nav className="flex gap-1 border-b border-border p-2">
         {(["chat", "preview", "project"] as Tab[]).map((t) => (
           <button
