@@ -33,7 +33,7 @@ function Builder() {
   const [loading, setLoading] = useState(false);
   const gen = useServerFn(generateApp);
   const pubFn = useServerFn(publishApp);
-  const [pub, setPub] = useState<{ code?: string; at?: number }>({});
+  const [pub, setPub] = useState<{ code?: string | undefined; at?: number | undefined }>({});
   const [publishing, setPublishing] = useState(false);
   const [pubError, setPubError] = useState("");
   const link = pub.at && typeof window !== "undefined" ? `${window.location.origin}/p/${id}` : "";
