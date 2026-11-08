@@ -28,3 +28,5 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Generated apps use a versioned multi-file React payload in `Project.code` and run through the shared Sandpack runner; this keeps AI edits, preview, and publishing on one source of truth while preserving legacy HTML projects.
