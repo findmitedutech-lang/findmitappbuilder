@@ -12,6 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PIdRouteImport } from './routes/p.$id'
 import { Route as ProjectIdRouteImport } from './routes/project.$id'
+import { Route as ApiPublicV1AuthRouteImport } from './routes/api/public/v1/auth'
+import { Route as ApiPublicV1DataRouteImport } from './routes/api/public/v1/data'
+import { Route as ApiPublicV1ProxyRouteImport } from './routes/api/public/v1/proxy'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +31,81 @@ const ProjectIdRoute = ProjectIdRouteImport.update({
   path: '/project/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicV1AuthRoute = ApiPublicV1AuthRouteImport.update({
+  id: '/api/public/v1/auth',
+  path: '/api/public/v1/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1DataRoute = ApiPublicV1DataRouteImport.update({
+  id: '/api/public/v1/data',
+  path: '/api/public/v1/data',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1ProxyRoute = ApiPublicV1ProxyRouteImport.update({
+  id: '/api/public/v1/proxy',
+  path: '/api/public/v1/proxy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/p/$id': typeof PIdRoute
   '/project/$id': typeof ProjectIdRoute
+  '/api/public/v1/auth': typeof ApiPublicV1AuthRoute
+  '/api/public/v1/data': typeof ApiPublicV1DataRoute
+  '/api/public/v1/proxy': typeof ApiPublicV1ProxyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/p/$id': typeof PIdRoute
   '/project/$id': typeof ProjectIdRoute
+  '/api/public/v1/auth': typeof ApiPublicV1AuthRoute
+  '/api/public/v1/data': typeof ApiPublicV1DataRoute
+  '/api/public/v1/proxy': typeof ApiPublicV1ProxyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/p/$id': typeof PIdRoute
   '/project/$id': typeof ProjectIdRoute
+  '/api/public/v1/auth': typeof ApiPublicV1AuthRoute
+  '/api/public/v1/data': typeof ApiPublicV1DataRoute
+  '/api/public/v1/proxy': typeof ApiPublicV1ProxyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/p/$id' | '/project/$id'
+  fullPaths:
+    | '/'
+    | '/p/$id'
+    | '/project/$id'
+    | '/api/public/v1/auth'
+    | '/api/public/v1/data'
+    | '/api/public/v1/proxy'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/p/$id' | '/project/$id'
-  id: '__root__' | '/' | '/p/$id' | '/project/$id'
+  to:
+    | '/'
+    | '/p/$id'
+    | '/project/$id'
+    | '/api/public/v1/auth'
+    | '/api/public/v1/data'
+    | '/api/public/v1/proxy'
+  id:
+    | '__root__'
+    | '/'
+    | '/p/$id'
+    | '/project/$id'
+    | '/api/public/v1/auth'
+    | '/api/public/v1/data'
+    | '/api/public/v1/proxy'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PIdRoute: typeof PIdRoute
   ProjectIdRoute: typeof ProjectIdRoute
+  ApiPublicV1AuthRoute: typeof ApiPublicV1AuthRoute
+  ApiPublicV1DataRoute: typeof ApiPublicV1DataRoute
+  ApiPublicV1ProxyRoute: typeof ApiPublicV1ProxyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +131,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/auth': {
+      id: '/api/public/v1/auth'
+      path: '/api/public/v1/auth'
+      fullPath: '/api/public/v1/auth'
+      preLoaderRoute: typeof ApiPublicV1AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/data': {
+      id: '/api/public/v1/data'
+      path: '/api/public/v1/data'
+      fullPath: '/api/public/v1/data'
+      preLoaderRoute: typeof ApiPublicV1DataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/proxy': {
+      id: '/api/public/v1/proxy'
+      path: '/api/public/v1/proxy'
+      fullPath: '/api/public/v1/proxy'
+      preLoaderRoute: typeof ApiPublicV1ProxyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +159,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PIdRoute: PIdRoute,
   ProjectIdRoute: ProjectIdRoute,
+  ApiPublicV1AuthRoute: ApiPublicV1AuthRoute,
+  ApiPublicV1DataRoute: ApiPublicV1DataRoute,
+  ApiPublicV1ProxyRoute: ApiPublicV1ProxyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

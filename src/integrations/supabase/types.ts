@@ -14,6 +14,171 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_records: {
+        Row: {
+          app_id: string
+          collection: string
+          created_at: string
+          data: Json
+          id: string
+          owner_id: string | null
+        }
+        Insert: {
+          app_id: string
+          collection: string
+          created_at?: string
+          data?: Json
+          id?: string
+          owner_id?: string | null
+        }
+        Update: {
+          app_id?: string
+          collection?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          owner_id?: string | null
+        }
+        Relationships: []
+      }
+      app_sessions: {
+        Row: {
+          app_id: string
+          expires_at: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          app_id: string
+          expires_at: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string
+          expires_at?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      app_tenants: {
+        Row: {
+          api_key: string
+          created_at: string
+          project_id: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          project_id: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          project_id?: string
+        }
+        Relationships: []
+      }
+      app_users: {
+        Row: {
+          app_id: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          password_hash: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          email: string
+          id?: string
+          name?: string
+          password_hash: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          password_hash?: string
+        }
+        Relationships: []
+      }
+      builder_projects: {
+        Row: {
+          data: Json
+          id: string
+          updated_at: string
+          workspace_hash: string
+        }
+        Insert: {
+          data?: Json
+          id: string
+          updated_at?: string
+          workspace_hash: string
+        }
+        Update: {
+          data?: Json
+          id?: string
+          updated_at?: string
+          workspace_hash?: string
+        }
+        Relationships: []
+      }
+      project_secrets: {
+        Row: {
+          allowed_host: string
+          id: string
+          name: string
+          project_id: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          allowed_host?: string
+          id?: string
+          name: string
+          project_id: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          allowed_host?: string
+          id?: string
+          name?: string
+          project_id?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      project_versions: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          label: string
+          project_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          label?: string
+          project_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string
+          project_id?: string
+        }
+        Relationships: []
+      }
       published_apps: {
         Row: {
           code: string
@@ -21,6 +186,7 @@ export type Database = {
           id: string
           name: string
           published_at: string
+          slug: string | null
         }
         Insert: {
           code?: string
@@ -28,6 +194,7 @@ export type Database = {
           id: string
           name?: string
           published_at?: string
+          slug?: string | null
         }
         Update: {
           code?: string
@@ -35,6 +202,7 @@ export type Database = {
           id?: string
           name?: string
           published_at?: string
+          slug?: string | null
         }
         Relationships: []
       }

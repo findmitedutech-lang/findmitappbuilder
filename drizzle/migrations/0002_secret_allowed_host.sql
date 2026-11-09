@@ -1,0 +1,1 @@
+ALTER TABLE public.project_secrets ADD COLUMN allowed_host text NOT NULL DEFAULT '';
