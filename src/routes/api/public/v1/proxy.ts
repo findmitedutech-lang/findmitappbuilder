@@ -39,7 +39,7 @@ export const Route = createFileRoute("/api/public/v1/proxy")({
         const body = b.body ? fill(b.body) : undefined;
         if (blocked) return json({ error: blocked }, 400);
         try {
-          const res = await fetch(url, { method: b.method, headers, body: b.method === "GET" ? undefined : body });
+          const res = await fetch(url, { method: b.method, headers, body: b.method === "GET" ? null : (body ?? null) });
           const text = await res.text();
           return new Response(text, { status: res.status, headers: { ...CORS, "content-type": res.headers.get("content-type") ?? "text/plain" } });
         } catch {

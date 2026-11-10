@@ -59,7 +59,7 @@ function pushToCloud(p: Project) {
 /** Pulls cloud projects into this browser, and uploads any local-only projects. */
 export async function syncProjects(): Promise<Project[]> {
   const key = getWorkspaceKey();
-  const remote = (await cloudListProjects({ data: { key } })) as unknown as Project[];
+  const remote = JSON.parse(await cloudListProjects({ data: { key } })) as Project[];
   const local = listProjects();
   const byId = new Map<string, Project>();
   for (const p of remote) byId.set(p.id, p);

@@ -10,7 +10,7 @@ export const cloudListProjects = createServerFn({ method: "POST" })
     const { admin, sha256 } = await import("./cloud.server");
     const db = await admin();
     const { data: rows } = await db.from("builder_projects").select("data").eq("workspace_hash", await sha256(data.key)).order("updated_at", { ascending: false });
-    return (rows ?? []).map((r) => r.data as Record<string, unknown>);
+    return JSON.stringify((rows ?? []).map((r) => r.data));
   });
 
 export const cloudSaveProject = createServerFn({ method: "POST" })
