@@ -37,7 +37,7 @@ function Live() {
     return (
       <ClientOnly fallback={<div className="flex h-screen items-center justify-center bg-background text-muted-foreground">Starting app…</div>}>
         <Suspense fallback={<div className="flex h-screen items-center justify-center bg-background text-muted-foreground">Starting app…</div>}>
-          <div className="fixed inset-0"><ReactAppRunner files={source.files} /></div>
+          <div className="fixed inset-0"><ReactAppRunner files={source.files} apiKey={app.apiKey} /></div>
         </Suspense>
       </ClientOnly>
     );

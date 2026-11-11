@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { createProject, deleteProject, listProjects, type Project } from "@/lib/projects";
+import { createProject, deleteProject, getWorkspaceKey, listProjects, setWorkspaceKey, syncProjects, type Project } from "@/lib/projects";
+import { importZip } from "@/lib/zip";
+import { serializeProjectFiles } from "@/lib/react-project";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,7 +24,34 @@ function Dashboard() {
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => setProjects(listProjects()), []);
+  const [showKey, setShowKey] = useState(false);
+  const [keyInput, setKeyInput] = useState("");
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    setProjects(listProjects());
+    syncProjects().then(setProjects).catch(() => setStatus("Offline — showing projects on this device."));
+  }, []);
+
+  const onImport = async (f: File | undefined) => {
+    if (!f) return;
+    try {
+      setStatus("Importing…");
+      const { name, files } = await importZip(f);
+      const p = createProject(name, { code: serializeProjectFiles(files) });
+      navigate({ to: "/project/$id", params: { id: p.id } });
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Could not import this ZIP.");
+    }
+  };
+
+  const useKey = async () => {
+    if (keyInput.trim().length < 20) return setStatus("That sync key looks too short.");
+    setWorkspaceKey(keyInput);
+    setStatus("Loading projects…");
+    try { setProjects(await syncProjects()); setStatus("Projects synced from your other device."); setShowKey(false); }
+    catch { setStatus("Could not sync with that key."); }
+  };
 
   const create = () => {
     const p = createProject(name);
@@ -35,11 +64,38 @@ function Dashboard() {
         <h1 className="font-display text-lg font-bold">
           <span className="text-primary">FindMit</span> App Builder
         </h1>
+        <div className="flex flex-wrap justify-end gap-2">
+        <button onClick={() => { setKeyInput(""); setShowKey((v) => !v); }} className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">Sync devices</button>
+        <label className="cursor-pointer rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">
+          Import ZIP
+          <input type="file" accept=".zip" className="hidden" onChange={(e) => onImport(e.target.files?.[0])} />
+        </label>
         <button onClick={() => setCreating(true)} className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">
           + New project
         </button>
+        </div>
       </header>
       <main className="mx-auto max-w-4xl p-4">
+        {status && <p className="mb-3 text-sm text-muted-foreground">{status}</p>}
+        {showKey && (
+          <div className="mb-4 space-y-3 rounded-xl border border-border bg-card p-4 text-sm">
+            <div>
+              <div className="mb-1 font-medium">Your sync key</div>
+              <p className="mb-2 text-xs text-muted-foreground">Keep it private. Paste it on another phone or computer to see the same projects.</p>
+              <div className="flex gap-2">
+                <input readOnly value={getWorkspaceKey()} className="flex-1 rounded-md border border-input bg-background px-3 py-2 font-mono text-xs" />
+                <button onClick={() => navigator.clipboard.writeText(getWorkspaceKey()).then(() => setStatus("Sync key copied."))} className="rounded-md bg-secondary px-3 text-secondary-foreground">Copy</button>
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 font-medium">Use a key from another device</div>
+              <div className="flex gap-2">
+                <input value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="Paste sync key" className="flex-1 rounded-md border border-input bg-background px-3 py-2 font-mono text-xs" />
+                <button onClick={useKey} className="rounded-md bg-primary px-3 text-primary-foreground">Use key</button>
+              </div>
+            </div>
+          </div>
+        )}
         {creating && (
           <div className="mb-4 rounded-xl border border-border bg-card p-4">
             <label className="mb-2 block text-sm font-medium">Project name</label>
