@@ -15,6 +15,21 @@ function slug(name: string) {
 /** Packages FindMit files as a runnable Vite + React project (npm install && npm run dev). */
 export async function exportZip(name: string, files: ProjectFiles) {
   const zip = new JSZip();
+  for (const [p, c] of Object.entries(buildExportTree(name, files))) zip.file(p, c);
+  const blob = await zip.generateAsync({ type: "blob" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${slug(name)}.zip`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+export { slug as repoSlug };
+
+/** Runnable Vite + React file tree (repo-relative paths) for ZIP and GitHub export. */
+export function buildExportTree(name: string, files: ProjectFiles): Record<string, string> {
+  const out: Record<string, string> = {};
+  const zip = { file: (p: string, c: string) => { out[p] = c; } };
   let extra: Record<string, string> = {};
   try {
     extra = (JSON.parse(files["/package.json"] ?? "{}") as { dependencies?: Record<string, string> }).dependencies ?? {};
@@ -49,12 +64,7 @@ export async function exportZip(name: string, files: ProjectFiles) {
     JSON.stringify({ compilerOptions: { target: "ES2022", module: "ESNext", moduleResolution: "bundler", jsx: "react-jsx", strict: false, skipLibCheck: true, lib: ["ES2022", "DOM", "DOM.Iterable"] }, include: ["src"] }, null, 2),
   );
   zip.file("README.md", `# ${name}\n\nBuilt with FindMit App Builder.\n\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\`\n`);
-  const blob = await zip.generateAsync({ type: "blob" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${slug(name)}.zip`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  return out;
 }
 
 const TEXT = /\.(tsx?|jsx?|css|json|md|html|svg|txt)$/i;
@@ -62,11 +72,22 @@ const TEXT = /\.(tsx?|jsx?|css|json|md|html|svg|txt)$/i;
 /** Reads a project ZIP (FindMit export or any Vite/React src folder) into FindMit files. */
 export async function importZip(file: File): Promise<{ name: string; files: ProjectFiles }> {
   const zip = await JSZip.loadAsync(file);
-  const paths = Object.keys(zip.files).filter((p) => !zip.files[p]!.dir && !/(^|\/)(node_modules|\.git|dist)\//.test(p) && TEXT.test(p));
+  const entries = Object.keys(zip.files).filter((p) => !zip.files[p]!.dir);
+  return importTree(file.name.replace(/\.zip$/i, ""), entries, (p) => zip.files[p]!.async("string"));
+}
+
+export function isImportable(p: string) {
+  return !/(^|\/)(node_modules|\.git|dist)\//.test(p) && TEXT.test(p);
+}
+
+/** Converts any repo/ZIP file listing into FindMit files. */
+export async function importTree(defaultName: string, allPaths: string[], read: (p: string) => Promise<string>): Promise<{ name: string; files: ProjectFiles }> {
+  const zip = { files: Object.fromEntries(allPaths.map((p) => [p, { async: () => read(p) }])) as Record<string, { async: (t: "string") => Promise<string> }> };
+  const paths = allPaths.filter(isImportable);
   const appPath = paths.find((p) => /(^|\/)src\/App\.(tsx|jsx)$/.test(p)) ?? paths.find((p) => /(^|\/)App\.(tsx|jsx)$/.test(p));
-  if (!appPath) throw new Error("This ZIP has no App.tsx file.");
+  if (!appPath) throw new Error("No App.tsx file was found.");
   const root = appPath.replace(/App\.(tsx|jsx)$/, "");
-  let name = file.name.replace(/\.zip$/i, "");
+  let name = defaultName;
   const files: ProjectFiles = {};
   for (const p of paths) {
     if (/(^|\/)findmit\.json$/.test(p)) {

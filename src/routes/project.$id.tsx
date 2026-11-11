@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Code2, Download, ExternalLink, FileCode2, History, KeyRound, Monitor, RotateCw, Smartphone, Tablet, X } from "lucide-react";
+import { Code2, Download, Github, ExternalLink, FileCode2, History, KeyRound, Monitor, RotateCw, Smartphone, Tablet, X } from "lucide-react";
 import { generateApp } from "@/lib/generate.functions";
 import { checkSlug, publishApp, slugify } from "@/lib/publish.functions";
 import { addVersion, deleteSecret, getAppKey, listSecrets, listVersions, setSecret } from "@/lib/cloud.functions";
 import { getProject, getWorkspaceKey, syncProjects, updateProject, type Msg } from "@/lib/projects";
 import { parseProjectSource, serializeProjectFiles } from "@/lib/react-project";
+
+import GitHubPanel from "@/components/GitHubPanel";
 
 const ReactAppRunner = lazy(() => import("@/components/ReactAppRunner"));
 
@@ -26,7 +28,7 @@ export const Route = createFileRoute("/project/$id")({
 });
 
 type Device = "desktop" | "tablet" | "mobile";
-type Panel = null | "code" | "history" | "secrets";
+type Panel = null | "code" | "history" | "secrets" | "github";
 type Version = { id: string; label: string; code: string; created_at: string };
 const DEVICE_W: Record<Device, string> = { desktop: "100%", tablet: "768px", mobile: "375px" };
 
@@ -198,6 +200,7 @@ function Builder() {
         <input aria-label="Project name" value={name} onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1 rounded bg-transparent px-1 font-display text-lg font-bold outline-none focus:ring-2 focus:ring-ring" />
         <button onClick={() => setPanel(panel === "history" ? null : "history")} className={iconBtn(panel === "history")} title="Version history" aria-label="Version history"><History className="size-4" /></button>
         <button onClick={() => setPanel(panel === "secrets" ? null : "secrets")} className={iconBtn(panel === "secrets")} title="Secrets" aria-label="Secrets"><KeyRound className="size-4" /></button>
+        <button onClick={() => setPanel(panel === "github" ? null : "github")} className={iconBtn(panel === "github")} title="GitHub" aria-label="GitHub"><Github className="size-4" /></button>
         <button onClick={doExport} disabled={source.kind !== "react"} className="flex items-center gap-1 rounded-md border border-border px-2 py-1.5 text-xs disabled:opacity-50" aria-label="Export ZIP"><Download className="size-3.5" /> ZIP</button>
         <span className="hidden text-xs text-muted-foreground lg:inline">{!pub.at ? "Not published" : pub.code === code && pub.slug === slug ? "Live · up to date" : "Unpublished changes"}</span>
         <button onClick={publish} disabled={!code || publishing || !slugOk} className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50">
@@ -311,6 +314,7 @@ function Builder() {
                   ))}
                 </div>
               )}
+              {panel === "github" && <GitHubPanel projectId={id} name={name} files={source.kind === "react" ? source.files : null} />}
               {panel === "secrets" && <SecretsPanel id={id} wsKey={wsKey} secrets={secrets} reload={loadSecrets} />}
             </aside>
           )}

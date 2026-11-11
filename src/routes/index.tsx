@@ -2,6 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { createProject, deleteProject, getWorkspaceKey, listProjects, setWorkspaceKey, syncProjects, type Project } from "@/lib/projects";
 import { importZip } from "@/lib/zip";
+import { importRepo } from "@/lib/github";
+import { GitHubConnect } from "@/components/GitHubPanel";
 import { serializeProjectFiles } from "@/lib/react-project";
 
 export const Route = createFileRoute("/")({
@@ -45,6 +47,19 @@ function Dashboard() {
     }
   };
 
+  const [showGh, setShowGh] = useState(false);
+  const [repoInput, setRepoInput] = useState("");
+  const onGhImport = async () => {
+    try {
+      setStatus("Importing from GitHub…");
+      const { name, files } = await importRepo(repoInput);
+      const p = createProject(name, { code: serializeProjectFiles(files) });
+      navigate({ to: "/project/$id", params: { id: p.id } });
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Could not import this repo.");
+    }
+  };
+
   const useKey = async () => {
     if (keyInput.trim().length < 20) return setStatus("That sync key looks too short.");
     setWorkspaceKey(keyInput);
@@ -66,6 +81,7 @@ function Dashboard() {
         </h1>
         <div className="flex flex-wrap justify-end gap-2">
         <button onClick={() => { setKeyInput(""); setShowKey((v) => !v); }} className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">Sync devices</button>
+        <button onClick={() => setShowGh((v) => !v)} className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">Import GitHub</button>
         <label className="cursor-pointer rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">
           Import ZIP
           <input type="file" accept=".zip" className="hidden" onChange={(e) => onImport(e.target.files?.[0])} />
@@ -77,6 +93,17 @@ function Dashboard() {
       </header>
       <main className="mx-auto max-w-4xl p-4">
         {status && <p className="mb-3 text-sm text-muted-foreground">{status}</p>}
+        {showGh && (
+          <div className="mb-4 space-y-3 rounded-xl border border-border bg-card p-4 text-sm">
+            <div className="font-medium">Import from GitHub</div>
+            <GitHubConnect />
+            <p className="text-xs text-muted-foreground">Public repos work without connecting. Connect to import your private repos.</p>
+            <div className="flex gap-2">
+              <input value={repoInput} onChange={(e) => setRepoInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && onGhImport()} placeholder="owner/repo or GitHub link" className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-xs" />
+              <button onClick={onGhImport} disabled={!repoInput.trim()} className="rounded-md bg-primary px-3 text-primary-foreground disabled:opacity-50">Import</button>
+            </div>
+          </div>
+        )}
         {showKey && (
           <div className="mb-4 space-y-3 rounded-xl border border-border bg-card p-4 text-sm">
             <div>
